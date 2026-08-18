@@ -1,0 +1,23 @@
+{
+  "name": "lunajoy",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,client -c cyan,magenta \"npm run dev -w @lunajoy/server\" \"npm run dev -w @lunajoy/client\"",
+    "build": "npm run build -w @lunajoy/server && npm run build -w @lunajoy/client",
+    "start": "npm run start -w @lunajoy/server",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "prettier": "^3.9.6"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
