@@ -4,16 +4,7 @@ import type { DailyLog, LogInput, User } from "./types";
 import { Landing } from "./components/Landing";
 import { Dashboard } from "./components/Dashboard";
 
-const authMessages: Record<string, string> = {
-  google_not_configured: "Google sign-in has not been configured.",
-  google_token_exchange_failed: "Google could not complete the secure sign-in exchange. Please try again.",
-  google_identity_verification_failed: "Google signed you in, but the returned identity could not be verified.",
-  google_account_save_failed: "Google signed you in, but your LunaJoy account could not be saved.",
-};
-
-function getAuthMessage(code: string) {
-  return authMessages[code] ?? "Google sign-in was not completed. Please try again.";
-}
+const googleAuthError = "Google sign-in failed. Please try again.";
 
 function App() {
   const params = new URLSearchParams(window.location.search);
@@ -42,7 +33,7 @@ function App() {
 
     const authIssue = params.get("authError");
     if (authIssue) {
-      setAuthError(getAuthMessage(authIssue));
+      setAuthError(googleAuthError);
       window.history.replaceState({}, "", "/");
     } else if (params.has("authComplete")) {
       window.history.replaceState({}, "", "/");
@@ -59,7 +50,7 @@ function App() {
       if (data.type !== "lunajoy:google-auth") return;
       const authIssue = typeof data.authError === "string" ? data.authError : "";
       if (authIssue) {
-        setAuthError(getAuthMessage(authIssue));
+        setAuthError(googleAuthError);
         return;
       }
 
@@ -68,7 +59,7 @@ function App() {
         const response = await api.session();
         setUser(response.user);
       } catch {
-        setAuthError("Google sign-in completed, but the session could not be loaded. Please try again.");
+        setAuthError(googleAuthError);
       }
     };
 
