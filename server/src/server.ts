@@ -16,7 +16,6 @@ import { logRoutes } from "./routes/logs.js";
 declare module "fastify" {
   interface FastifyInstance {
     broadcastLogUpdate(userId: number, log: unknown): void;
-    broadcastLogDelete(userId: number, date: string): void;
   }
 }
 
@@ -56,12 +55,6 @@ if (config.googleEnabled) {
 app.decorate("broadcastLogUpdate", (userId: number, log: unknown) => {
   for (const socket of sockets.get(userId) ?? []) {
     if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: "log.updated", log }));
-  }
-});
-
-app.decorate("broadcastLogDelete", (userId: number, date: string) => {
-  for (const socket of sockets.get(userId) ?? []) {
-    if (socket.readyState === socket.OPEN) socket.send(JSON.stringify({ type: "log.deleted", date }));
   }
 });
 

@@ -105,17 +105,6 @@ export async function logRoutes(app: FastifyInstance) {
 
   app.post("/api/log", { preHandler: requireAuth }, saveLog);
 
-  app.delete("/api/log/:date", { preHandler: requireAuth }, async (request, reply) => {
-    const parsed = z.object({ date: logSchema.shape.date }).safeParse(request.params);
-    if (!parsed.success) return reply.code(400).send({ message: "That check-in date is not valid." });
-
-    const result = db.prepare("DELETE FROM daily_logs WHERE user_id = ? AND log_date = ?").run(request.user.id, parsed.data.date);
-    if (!result.changes) return reply.code(404).send({ message: "That check-in could not be found." });
-
-    app.broadcastLogDelete(request.user.id, parsed.data.date);
-    return reply.code(204).send();
-  });
-
   app.get("/api/logs", { preHandler: requireAuth }, async (request) => {
     const query = z.object({ period: z.enum(["week", "month"]).default("week") }).parse(request.query);
     const days = query.period === "week" ? 7 : 30;

@@ -1,15 +1,18 @@
 import type { DailyLog } from "./types";
 
 export type MetricKey = "mood" | "anxiety" | "stress" | "sleepHours";
+export type TrendMetricKey = MetricKey | "sleepQuality" | "activityMinutes" | "socialInteractions";
 
 export const metricKeys: MetricKey[] = ["mood", "anxiety", "stress", "sleepHours"];
+export const trendMetricKeys: TrendMetricKey[] = ["mood", "anxiety", "stress", "sleepHours", "sleepQuality", "activityMinutes", "socialInteractions"];
+export const defaultTrendMetrics: TrendMetricKey[] = ["mood", "stress", "sleepHours"];
 
 export const metricDetails: Record<MetricKey, { label: string; averageLabel: string; color: string; tooltip: string }> = {
   mood: {
     label: "Mood",
     averageLabel: "Average mood",
     color: "#e89c66",
-    tooltip: "Mood is self-rated from 1 (very low) to 5 (very good).",
+    tooltip: "Mood is self-rated from 1 (very sad) to 5 (very happy).",
   },
   anxiety: {
     label: "Anxiety",
@@ -31,6 +34,28 @@ export const metricDetails: Record<MetricKey, { label: string; averageLabel: str
   },
 };
 
+export const trendMetricDetails: Record<TrendMetricKey, { label: string; color: string; tooltip: string }> = {
+  mood: metricDetails.mood,
+  anxiety: metricDetails.anxiety,
+  stress: metricDetails.stress,
+  sleepHours: metricDetails.sleepHours,
+  sleepQuality: {
+    label: "Sleep quality",
+    color: "#628ea7",
+    tooltip: "Sleep quality is self-rated from 1 (very poor) to 5 (restorative).",
+  },
+  activityMinutes: {
+    label: "Movement",
+    color: "#d19a3f",
+    tooltip: "Movement shows the number of active minutes recorded in each check-in.",
+  },
+  socialInteractions: {
+    label: "Social engagement",
+    color: "#518a84",
+    tooltip: "Social engagement records frequency from 1 (none) to 5 (very frequent).",
+  },
+};
+
 export function averageMetric(logs: DailyLog[], key: MetricKey) {
   if (!logs.length) return null;
   return logs.reduce((total, log) => total + log[key], 0) / logs.length;
@@ -43,11 +68,11 @@ export function formatMetricValue(key: MetricKey, value: number, averaged = fals
 
 export function describeMetric(key: MetricKey, value: number) {
   if (key === "mood") {
-    if (value < 1.5) return "A difficult day";
-    if (value < 2.5) return "Feeling low";
-    if (value < 3.5) return "Holding steady";
-    if (value < 4.5) return "Feeling positive";
-    return "Feeling strong";
+    if (value < 1.5) return "Very sad";
+    if (value < 2.5) return "Sad";
+    if (value < 3.5) return "Neutral";
+    if (value < 4.5) return "Happy";
+    return "Very happy";
   }
 
   if (key === "anxiety") {
@@ -82,14 +107,50 @@ export function describePeriod(logs: DailyLog[]) {
   const sleep = averageMetric(logs, "sleepHours") ?? 0;
 
   if (anxiety >= 3.5 || stress >= 3.5) return "This period carried more pressure. Notice where extra support or recovery could help.";
-  if (mood >= 3.5 && sleep >= 7) return "Your recent check-ins show steadier mood and supportive rest.";
+  if (mood <= 2.5) return "Mood has leaned sadder in this period. Notice what support might feel useful.";
+  if (mood >= 3.5 && sleep >= 7) return "Your recent check-ins lean happier alongside supportive rest.";
   if (sleep < 6.5) return "Rest has been shorter lately. A gentler rhythm may feel supportive.";
   return "Your recent check-ins show a balanced mix of days. Small patterns are beginning to take shape.";
 }
 
 export function describeDay(log: DailyLog) {
+  if (log.mood <= 2) return "You reported feeling sadder today. A gentler pace or reaching out may feel supportive.";
   if (log.anxiety >= 4 || log.stress >= 4) return "You noticed more pressure today. That awareness can help you choose what you need next.";
-  if (log.mood >= 4 && log.sleepHours >= 7) return "Your check-in points to steadier energy and supportive rest today.";
+  if (log.mood >= 4 && log.sleepHours >= 7) return "You reported a happier mood alongside supportive rest today.";
   if (log.sleepHours < 6) return "Rest was shorter today. A gentler pace may feel supportive.";
   return "Your check-in reflects a mixed, human day. Keep noticing what supports you.";
+}
+
+export function trendMetricValue(log: DailyLog, key: TrendMetricKey) {
+  return log[key];
+}
+
+export function normalizeTrendMetric(log: DailyLog, key: TrendMetricKey) {
+  const value = trendMetricValue(log, key);
+  if (key === "sleepHours") return Math.min(value / 2, 5);
+  if (key === "activityMinutes") return Math.min(value / 12, 5);
+  return value;
+}
+
+export function formatTrendMetric(key: TrendMetricKey, value: number) {
+  if (key === "sleepHours") return `${Number.isInteger(value) ? value : value.toFixed(1)}h`;
+  if (key === "activityMinutes") return `${value} min`;
+  return `${Number.isInteger(value) ? value : value.toFixed(1)}/5`;
+}
+
+export function describeTrendMetric(key: TrendMetricKey, value: number) {
+  if (key === "mood" || key === "anxiety" || key === "stress" || key === "sleepHours") return describeMetric(key, value);
+  if (key === "sleepQuality") return ["", "Very poor", "Poor", "Fair", "Good", "Restorative"][Math.round(value)];
+  if (key === "activityMinutes") {
+    if (value === 0) return "No movement logged";
+    if (value < 15) return "A little movement";
+    if (value < 30) return "Gentle movement";
+    if (value <= 60) return "Active time";
+    return "Extended movement";
+  }
+  if (value < 1.5) return "No social engagements";
+  if (value < 2.5) return "A few engagements";
+  if (value < 3.5) return "Some engagement";
+  if (value < 4.5) return "Frequent engagement";
+  return "Very frequent engagement";
 }

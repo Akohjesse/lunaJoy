@@ -2,14 +2,16 @@ import { useMemo, useState } from "react";
 import { LuBell as Bell, LuMenu as Menu, LuPlus as Plus } from "react-icons/lu";
 import { format, isToday, parseISO } from "date-fns";
 import type { DailyLog, LogInput, User } from "../types";
-import { averageMetric, describePeriod, metricDetails, metricKeys } from "../wellbeing";
+import { averageMetric, defaultTrendMetrics, describePeriod, metricKeys, trendMetricDetails, type TrendMetricKey } from "../wellbeing";
 import { AccountMenu } from "./AccountMenu";
 import { CheckInModal } from "./CheckInModal";
 import { InfoTooltip } from "./InfoTooltip";
+import { LogDetailsModal } from "./LogDetailsModal";
 import { MetricCard } from "./MetricCard";
 import { Sidebar } from "./Sidebar";
 import { TodayReflection } from "./TodayReflection";
 import { TrendChart } from "./TrendChart";
+import { TrendMetricPicker } from "./TrendMetricPicker";
 
 type DashboardProps = {
   user: User;
@@ -17,11 +19,9 @@ type DashboardProps = {
   period: "week" | "month";
   loadingLogs: boolean;
   saving: boolean;
-  deleting: boolean;
   toast: string;
   onPeriodChange(period: "week" | "month"): void;
   onSave(input: LogInput): Promise<void>;
-  onDelete(date: string): Promise<void>;
   onLogout(): Promise<void>;
 };
 
@@ -34,7 +34,24 @@ const button = [
 
 const iconButton = ["grid h-10 w-10 cursor-pointer place-items-center rounded-[11px] border border-line", "bg-white/60 transition-transform duration-150 ease-[cubic-bezier(.23,1,.32,1)]", "active:scale-[.96]"].join(" ");
 
-const eyebrow = ["block text-[11px] font-bold tracking-[.13em] text-[#5d807a] uppercase"].join(" ");
+const eyebrow = ["block text-xs font-bold tracking-[.13em] text-[#5d807a] uppercase"].join(" ");
+
+type PeriodToggleProps = {
+  period: "week" | "month";
+  onChange(period: "week" | "month"): void;
+};
+
+function PeriodToggle({ period, onChange }: PeriodToggleProps) {
+  return (
+    <div className="flex rounded-[10px] bg-[#efede7] p-1">
+      {(["week", "month"] as const).map((value) => (
+        <button className={`h-8 cursor-pointer rounded-lg border-0 px-3 text-xs font-bold ${period === value ? "bg-white text-brand-dark shadow-[0_2px_8px_rgba(29,47,41,.08)]" : "bg-transparent text-muted"}`} onClick={() => onChange(value)} key={value}>
+          {value === "week" ? "7 days" : "30 days"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function greeting() {
   const hour = new Date().getHours();
@@ -43,10 +60,20 @@ function greeting() {
   return "Good evening";
 }
 
-export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, toast, onPeriodChange, onSave, onDelete, onLogout }: DashboardProps) {
+export function Dashboard({ user, logs, period, loadingLogs, saving, toast, onPeriodChange, onSave, onLogout }: DashboardProps) {
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
+  const [trendMetrics, setTrendMetrics] = useState<TrendMetricKey[]>(defaultTrendMetrics);
+  const [selectedHistoryLog, setSelectedHistoryLog] = useState<DailyLog | null>(null);
   const todayLog = useMemo(() => logs.find((log) => isToday(parseISO(log.date))), [logs]);
+  const historyLogs = useMemo(
+    () =>
+      [...logs]
+        .filter((log) => !isToday(parseISO(log.date)))
+        .reverse()
+        .slice(0, 5),
+    [logs],
+  );
 
   const openCheckIn = () => {
     setCheckInOpen(true);
@@ -113,11 +140,11 @@ export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, t
               onClick={openCheckIn}
             >
               <Plus size={19} />
-              {todayLog ? "Update today’s check-in" : "Start today’s check-in"}
+              {todayLog ? "View and edit today’s log" : "Start today’s check-in"}
             </button>
           </section>
 
-          <TodayReflection log={todayLog} deleting={deleting} onCheckIn={openCheckIn} onDelete={onDelete} />
+          <TodayReflection log={todayLog} onCheckIn={openCheckIn} />
 
           <section className="my-5.5 rounded-[20px] border border-line bg-panel p-5 min-[701px]:p-7">
             <div className="mb-5 flex flex-col justify-between gap-3 min-[701px]:flex-row min-[701px]:items-end">
@@ -126,9 +153,12 @@ export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, t
                 <h2 className="my-1.5 text-[22px]">Your {period === "week" ? "weekly" : "monthly"} averages</h2>
                 <p className="m-0 max-w-[680px] text-sm leading-6 text-muted">{describePeriod(logs)}</p>
               </div>
-              <span className="text-xs text-muted">
-                Based on {logs.length} {logs.length === 1 ? "check-in" : "check-ins"}
-              </span>
+              <div className="flex flex-col items-start gap-2 min-[701px]:items-end">
+                <PeriodToggle period={period} onChange={onPeriodChange} />
+                <span className="text-xs text-muted">
+                  Based on {logs.length} {logs.length === 1 ? "check-in" : "check-ins"}
+                </span>
+              </div>
             </div>
             <div className="grid grid-cols-1 gap-3 min-[501px]:grid-cols-2 min-[1101px]:grid-cols-4">
               {metricKeys.map((metric) => (
@@ -151,29 +181,18 @@ export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, t
                 <h2 className="my-1.5 text-[22px]">Wellbeing trends</h2>
                 <p className="m-0 text-[13px] text-muted">A clear view of how you’ve been feeling.</p>
               </div>
-              <div
-                className="flex w-full self-stretch rounded-[10px] bg-[#efede7]
-                  p-1 min-[701px]:w-auto"
-              >
-                {(["week", "month"] as const).map((value) => (
-                  <button
-                    className={`h-8 flex-1 cursor-pointer rounded-lg border-0 px-3
-                      text-xs font-bold min-[701px]:flex-none ${period === value ? "bg-white text-brand-dark shadow-[0_2px_8px_rgba(29,47,41,.08)]" : "bg-transparent text-muted"}`}
-                    onClick={() => onPeriodChange(value)}
-                    key={value}
-                  >
-                    {value === "week" ? "7 days" : "30 days"}
-                  </button>
-                ))}
+              <div className="flex gap-2">
+                <PeriodToggle period={period} onChange={onPeriodChange} />
+                <TrendMetricPicker value={trendMetrics} onChange={setTrendMetrics} />
               </div>
             </div>
 
-            <div className="my-6 flex flex-wrap items-center gap-4.5 text-[11px] text-muted">
-              {metricKeys.map((metric) => (
+            <div className="my-6 flex flex-wrap items-center gap-4.5 text-xs text-muted">
+              {trendMetrics.map((metric) => (
                 <span className="flex items-center gap-1.5" key={metric}>
-                  <i className="h-2 w-2 rounded-full" style={{ backgroundColor: metricDetails[metric].color }} />
-                  {metricDetails[metric].label}
-                  <InfoTooltip label={`About ${metricDetails[metric].label.toLowerCase()} in this chart`}>{metricDetails[metric].tooltip}</InfoTooltip>
+                  <i className="h-2 w-2 rounded-full" style={{ backgroundColor: trendMetricDetails[metric].color }} />
+                  {trendMetricDetails[metric].label}
+                  <InfoTooltip label={`About ${trendMetricDetails[metric].label.toLowerCase()} in this chart`}>{trendMetricDetails[metric].tooltip}</InfoTooltip>
                 </span>
               ))}
               <small
@@ -183,7 +202,7 @@ export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, t
                 {loadingLogs ? "Refreshing…" : "Updates live"}
               </small>
             </div>
-            <TrendChart logs={logs} />
+            <TrendChart logs={logs} metrics={trendMetrics} />
           </section>
 
           <section
@@ -196,56 +215,55 @@ export function Dashboard({ user, logs, period, loadingLogs, saving, deleting, t
               <h2 className="my-1.5 text-[22px]">Your check-in history</h2>
             </div>
 
-            {logs.length ? (
+            {historyLogs.length ? (
               <div className="mt-5 border-t border-line">
-                {[...logs]
-                  .reverse()
-                  .slice(0, 5)
-                  .map((log) => {
-                    const date = parseISO(log.date);
+                {historyLogs.map((log) => {
+                  const date = parseISO(log.date);
 
-                    return (
-                      <button
-                        className="grid min-h-[66px] w-full cursor-pointer
+                  return (
+                    <button
+                      className="grid min-h-[66px] w-full cursor-pointer
                           grid-cols-[45px_1fr_20px] items-center gap-3.5 border-0
                           border-b border-line bg-transparent text-left
                           hover:bg-[#faf8f3]
                           min-[701px]:grid-cols-[45px_1fr_auto_20px]"
-                        key={log.id}
-                        onClick={openCheckIn}
-                      >
-                        <span
-                          className="grid h-[43px] w-[39px] place-content-center
+                      key={log.id}
+                      onClick={() => setSelectedHistoryLog(log)}
+                    >
+                      <span
+                        className="grid h-[43px] w-[39px] place-content-center
                             rounded-[11px] bg-[#edeae2] text-center"
-                        >
-                          <strong className="leading-none">{format(date, "d")}</strong>
-                          <small className="text-[11px] text-muted">{format(date, "MMM")}</small>
-                        </span>
-                        <span className="flex flex-col gap-1">
-                          <strong>{isToday(date) ? "Today’s check-in" : format(date, "EEEE")}</strong>
-                          <small className="text-[11px] text-muted">
-                            {log.activityType || "A quiet day"} · {log.sleepHours}h sleep
-                          </small>
-                        </span>
-                        <span
-                          className="hidden rounded-full bg-[#e5ede8] px-2.5 py-1.5
+                      >
+                        <strong className="leading-none">{format(date, "d")}</strong>
+                        <small className="text-xs text-muted">{format(date, "MMM")}</small>
+                      </span>
+                      <span className="flex flex-col gap-1">
+                        <strong>{isToday(date) ? "Today’s check-in" : format(date, "EEEE")}</strong>
+                        <small className="text-xs text-muted">
+                          {log.activityType || "A quiet day"} · {log.sleepHours}h sleep
+                        </small>
+                      </span>
+                      <span
+                        className="hidden rounded-full bg-[#e5ede8] px-2.5 py-1.5
                             text-xs text-brand min-[701px]:block"
-                        >
-                          Mood {log.mood}/5
-                        </span>
-                        <span>›</span>
-                      </button>
-                    );
-                  })}
+                      >
+                        Mood {log.mood}/5
+                      </span>
+                      <span>›</span>
+                    </button>
+                  );
+                })}
               </div>
             ) : (
-              <p className="text-[13px] text-muted">Your check-ins will appear here.</p>
+              <p className="text-[13px] text-muted">Past check-ins will appear here.</p>
             )}
           </section>
         </main>
       </div>
 
       <CheckInModal open={checkInOpen} existing={todayLog} saving={saving} onClose={() => setCheckInOpen(false)} onSave={saveLog} />
+
+      {selectedHistoryLog && <LogDetailsModal log={selectedHistoryLog} onClose={() => setSelectedHistoryLog(null)} />}
 
       {toast && (
         <div

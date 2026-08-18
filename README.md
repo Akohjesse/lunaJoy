@@ -1,62 +1,135 @@
 # LunaJoy
 
-LunaJoy is a mental health progress tracker built with React, Fastify, TypeScript, WebSockets, and SQLite.
+LunaJoy is a mental health progress tracker built with React, Fastify, TypeScript, Tailwind CSS and SQLite.
+
 
 ## Project structure
 
 ```text
 LunaJoy/
-├── client/   React and Vite frontend
-├── server/   Fastify API and SQLite database
-└── package.json
+├── client/         React, Vite, and Tailwind frontend
+├── server/         Fastify API
+│   └── data/       SQLite database created at runtime
+├── .env.example    Environment variable template
+└── package.json    npm workspace scripts
 ```
 
-## Features
+## Requirements
 
-- Google OAuth sign-in with secure HTTP-only session cookies
-- Guided daily check-in for mood, anxiety, sleep, activity, social connection, stress, and symptoms
-- Weekly and monthly trend charts for mood, anxiety, stress, and sleep
-- Real-time dashboard updates over WebSockets
-- One editable or deletable check-in per user per day
-- Responsive, accessible interface with supportive language and metric tooltips
+- Node.js 20 or newer
+- npm
+- A Google OAuth 2.0 Web application client
+
+## Google OAuth setup
+
+1. Open the [Google Cloud Console](https://console.cloud.google.com/).
+2. Create or select a project.
+3. Configure the OAuth consent screen under **Google Auth Platform**. If the app is in testing, add your Google account as a test user.
+4. Open **Google Auth Platform → Clients** and create an **OAuth client ID** with the application type **Web application**.
+5. Add this authorized redirect URI:
+
+   ```text
+   http://localhost:4000/api/auth/google/callback
+   ```
+
+6. Copy the generated client ID and client secret into `server/.env` as described below.
 
 ## Run locally
 
-Requirements: Node.js 20 or newer.
+From the repository root:
 
 ```bash
-cp .env.example .env
+cp .env.example server/.env
 npm install
+```
+
+Open `server/.env` and replace these values with the credentials from Google Cloud:
+
+```env
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+JWT_SECRET=a-long-random-secret
+```
+
+You can generate a JWT secret with:
+
+```bash
+openssl rand -base64 32
+```
+
+Start both applications:
+
+```bash
 npm run dev
 ```
 
-Open `http://localhost:5173`. The API runs at `http://localhost:4000`.
+- Client: `http://localhost:5173`
+- API: `http://localhost:4000`
+- SQLite database: `server/data/lunajoy.db`
 
-## Google authentication
+The database and its tables are created automatically. The root `npm install` installs dependencies for both workspaces; do not run a separate install inside `client` or `server`.
 
-1. Create an OAuth 2.0 Client ID for a Web application in Google Cloud.
-2. Add `http://localhost:4000/api/auth/google/callback` as an authorized redirect URI.
-3. Copy `.env.example` to `.env`.
-4. Set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and a long random `JWT_SECRET`.
-5. Restart the development server and select **Continue with Google**.
+## Environment variables
 
-For production, use the deployed callback URL in both Google Cloud and `GOOGLE_CALLBACK_URL`. Set `WEB_ORIGIN` to the deployed client origin.
+The server reads `server/.env`.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `GOOGLE_CLIENT_ID` | Yes | None | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | Yes | None | Google OAuth client secret |
+| `JWT_SECRET` | Yes | Development fallback | Signs session tokens; always replace it |
+| `GOOGLE_CALLBACK_URL` | No | `http://localhost:4000/api/auth/google/callback` | OAuth callback registered with Google |
+| `WEB_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin and OAuth return origin |
+| `PORT` | No | `4000` | API port |
+| `HOST` | No | `0.0.0.0` | API host |
+| `DATABASE_PATH` | No | `./data/lunajoy.db` | SQLite path relative to the server workspace |
+
+## API endpoints
+
+All log and session endpoints use the `lunajoy_session` HTTP-only cookie. Unauthenticated requests return `401 Unauthorized`.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/health` | API health check |
+| `GET` | `/api/auth/google` | Start Google OAuth |
+| `GET` | `/api/auth/google/callback` | Complete Google OAuth and create the session |
+| `GET` | `/api/auth/session` | Return the authenticated user |
+| `POST` | `/api/auth/logout` | Clear the session cookie |
+| `POST` | `/api/log` | Create or update one log for the supplied date |
+| `GET` | `/api/logs?period=week` | Return the last 7 days of logs |
+| `GET` | `/api/logs?period=month` | Return the last 30 days of logs |
+| `GET` | `/api/updates` | Upgrade to an authenticated WebSocket connection |
+
+Example `POST /api/log` body:
+
+```json
+{
+  "date": "2026-08-18",
+  "mood": 4,
+  "anxiety": 2,
+  "sleepHours": 7.5,
+  "sleepQuality": 4,
+  "sleepDisturbances": "",
+  "activityType": "Walking",
+  "activityMinutes": 30,
+  "socialInteractions": 3,
+  "stress": 2,
+  "symptoms": [{ "name": "Low energy", "severity": 2 }],
+  "notes": "Felt better after getting outside."
+}
+```
+
+`POST /api/log` uses the user ID and date as a unique pair. Sending another log for the same date updates the existing database row.
+
+The WebSocket broadcasts `log.updated` after a log has been stored successfully. It keeps other open sessions current; it does not replace API or SQLite persistence.
 
 ## Production build
 
+Set production values in `server/.env`. `WEB_ORIGIN` and `GOOGLE_CALLBACK_URL` must use the deployed URLs, and the deployed callback must also be registered in Google Cloud.
+
 ```bash
 npm run build
-npm start
+NODE_ENV=production npm start
 ```
 
-The server serves the built React application from `client/dist` in production.
-
-## API
-
-- `GET /api/auth/google` starts Google OAuth
-- `GET /api/auth/session` returns the signed-in user
-- `POST /api/auth/logout` clears the session
-- `POST /api/log` creates or updates today's check-in
-- `DELETE /api/log/:date` deletes a check-in
-- `GET /api/logs?period=week|month` returns trend data
-- `GET /api/updates` upgrades to a WebSocket for live updates
+In production mode, Fastify serves the built React application from `client/dist`.

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LuArrowLeft as ArrowLeft, LuArrowRight as ArrowRight, LuCheck as Check, LuX as X } from "react-icons/lu";
 import { format } from "date-fns";
 import { DatePicker } from "./DatePicker";
+import { MovementSelect } from "./MovementSelect";
 import { ScaleField } from "./ScaleField";
 import type { DailyLog, LogInput, Symptom } from "../types";
 
@@ -111,10 +112,10 @@ export function CheckInModal({ open, existing, saving, onClose, onSave }: Props)
             <div className="animate-[step-in_.22s_ease]">
               <DatePicker value={form.date} max={format(new Date(), "yyyy-MM-dd")} onChange={(value) => update("date", value)} />
               <div className="grid grid-cols-1 gap-4.5 min-[701px]:grid-cols-2">
-                <ScaleField label="Mood" hint="How you’ve felt overall" value={form.mood} low="Very low" high="Very good" onChange={(value) => update("mood", value)} />
+                <ScaleField label="Mood" hint="How you’ve felt overall" value={form.mood} low="Very sad" high="Very happy" onChange={(value) => update("mood", value)} />
                 <ScaleField label="Anxiety" hint="How anxious you felt" value={form.anxiety} low="Calm" high="Very anxious" onChange={(value) => update("anxiety", value)} />
                 <ScaleField label="Stress" hint="How stressed you felt" value={form.stress} low="Low" high="Very high" onChange={(value) => update("stress", value)} />
-                <ScaleField label="Social connection" hint="How connected you felt" value={form.socialInteractions} low="Isolated" high="Connected" onChange={(value) => update("socialInteractions", value)} />
+                <ScaleField label="Social engagement" hint="How often you engaged with others" value={form.socialInteractions} low="None" high="Very frequent" onChange={(value) => update("socialInteractions", value)} />
               </div>
             </div>
           )}
@@ -136,12 +137,9 @@ export function CheckInModal({ open, existing, saving, onClose, onSave }: Props)
                     <option value="5">Restorative</option>
                   </select>
                 </label>
+                <MovementSelect value={form.activityType} onChange={(value) => update("activityType", value)} />
                 <label className={field}>
-                  <span>Activity type</span>
-                  <input className={input} value={form.activityType} placeholder="Walking, yoga, gym…" onChange={(event) => update("activityType", event.target.value)} />
-                </label>
-                <label className={field}>
-                  <span>Activity duration</span>
+                  <span>Movement duration</span>
                   <div className="relative flex items-center">
                     <input className={`${input} pr-11`} type="number" min="0" max="1440" value={form.activityMinutes} onChange={(event) => update("activityMinutes", Number(event.target.value))} />
                     <span className="absolute right-3 text-xs font-normal text-muted">min</span>

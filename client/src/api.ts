@@ -21,5 +21,4 @@ export const api = {
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
   logs: (period: "week" | "month") => request<{ logs: DailyLog[] }>(`/api/logs?period=${period}`),
   saveLog: (log: LogInput) => request<{ log: DailyLog }>("/api/log", { method: "POST", body: JSON.stringify(log) }),
-  deleteLog: (date: string) => request<void>(`/api/log/${date}`, { method: "DELETE" }),
 };

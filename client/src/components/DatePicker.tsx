@@ -44,7 +44,7 @@ export function DatePicker({ value, max, onChange }: DatePickerProps) {
               <CalendarDays size={19} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <small className="text-[11px] font-bold tracking-[.08em] text-muted uppercase">Selected date</small>
+              <small className="text-xs font-bold tracking-[.08em] text-muted uppercase">Selected date</small>
               <strong className="truncate text-sm text-ink">{format(selected, "EEEE, MMMM d, yyyy")}</strong>
             </span>
             <ChevronDown className="shrink-0 text-muted" size={17} />

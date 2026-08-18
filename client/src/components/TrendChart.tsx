@@ -1,11 +1,11 @@
 import { format, parseISO } from "date-fns";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, type TooltipContentProps } from "recharts";
 import type { DailyLog } from "../types";
-import { describeMetric, formatMetricValue, metricDetails, type MetricKey } from "../wellbeing";
+import { describeTrendMetric, formatTrendMetric, normalizeTrendMetric, trendMetricDetails, trendMetricKeys, trendMetricValue, type TrendMetricKey } from "../wellbeing";
 
-type ChartPoint = DailyLog & {
+type ChartPoint = Record<TrendMetricKey, number> & {
   label: string;
-  sleepScore: number;
+  log: DailyLog;
 };
 
 function ChartTooltip({ active, label, payload }: TooltipContentProps) {
@@ -17,18 +17,18 @@ function ChartTooltip({ active, label, payload }: TooltipContentProps) {
       <strong className="text-sm text-ink">{label}</strong>
       <div className="mt-2.5 space-y-2">
         {payload.map((entry) => {
-          const metric = (entry.dataKey === "sleepScore" ? "sleepHours" : entry.dataKey) as MetricKey;
-          const value = point[metric];
+          const metric = entry.dataKey as TrendMetricKey;
+          const value = trendMetricValue(point.log, metric);
 
           return (
             <div className="flex items-start justify-between gap-5 text-xs" key={metric}>
               <span className="flex items-center gap-2 text-muted">
                 <i className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
-                {metricDetails[metric].label}
+                {trendMetricDetails[metric].label}
               </span>
               <span className="text-right">
-                <strong className="block text-ink">{formatMetricValue(metric, value)}</strong>
-                <small className="text-muted">{describeMetric(metric, value)}</small>
+                <strong className="block text-ink">{formatTrendMetric(metric, value)}</strong>
+                <small className="text-muted">{describeTrendMetric(metric, value)}</small>
               </span>
             </div>
           );
@@ -38,12 +38,12 @@ function ChartTooltip({ active, label, payload }: TooltipContentProps) {
   );
 }
 
-export function TrendChart({ logs }: { logs: DailyLog[] }) {
+export function TrendChart({ logs, metrics }: { logs: DailyLog[]; metrics: TrendMetricKey[] }) {
   const data: ChartPoint[] = logs.map((log) => ({
-    ...log,
+    ...Object.fromEntries(trendMetricKeys.map((metric) => [metric, normalizeTrendMetric(log, metric)])),
     label: format(parseISO(log.date), "MMM d"),
-    sleepScore: Math.min(log.sleepHours / 2, 5),
-  }));
+    log,
+  })) as ChartPoint[];
 
   if (!logs.length) {
     return (
@@ -63,10 +63,9 @@ export function TrendChart({ logs }: { logs: DailyLog[] }) {
           <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fill: "#7a7d76", fontSize: 12 }} dy={10} />
           <YAxis domain={[0, 5]} axisLine={false} tickLine={false} tick={{ fill: "#7a7d76", fontSize: 12 }} ticks={[0, 1, 2, 3, 4, 5]} />
           <Tooltip content={ChartTooltip} cursor={{ stroke: "#cfc9bc", strokeDasharray: "4 4" }} />
-          <Line type="monotone" dataKey="mood" name="Mood" stroke={metricDetails.mood.color} strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 3 }} activeDot={{ r: 6 }} />
-          <Line type="monotone" dataKey="anxiety" name="Anxiety" stroke={metricDetails.anxiety.color} strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 3 }} activeDot={{ r: 6 }} />
-          <Line type="monotone" dataKey="stress" name="Stress" stroke={metricDetails.stress.color} strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 3 }} activeDot={{ r: 6 }} />
-          <Line type="monotone" dataKey="sleepScore" name="Sleep" stroke={metricDetails.sleepHours.color} strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 3 }} activeDot={{ r: 6 }} />
+          {metrics.map((metric) => (
+            <Line type="monotone" dataKey={metric} name={trendMetricDetails[metric].label} stroke={trendMetricDetails[metric].color} strokeWidth={3} dot={{ r: 4, fill: "#fff", strokeWidth: 3 }} activeDot={{ r: 6 }} isAnimationActive={false} key={metric} />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>

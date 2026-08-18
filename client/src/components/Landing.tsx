@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { LuChartNoAxesColumnIncreasing as BarChart3, LuHeartHandshake as HeartHandshake, LuLockKeyhole as LockKeyhole } from "react-icons/lu";
-import { describeMetric, formatMetricValue, metricDetails, metricKeys } from "../wellbeing";
+import { describeTrendMetric, formatTrendMetric, trendMetricDetails } from "../wellbeing";
 import { Logo } from "./Logo";
 
 type Props = {
@@ -16,10 +16,10 @@ const trustItems = [
 
 const previewValues = {
   mood: 4.2,
-  anxiety: 2.1,
   stress: 2,
   sleepHours: 7.5,
 };
+const previewMetrics = ["mood", "stress", "sleepHours"] as const;
 
 export function Landing({ error }: Props) {
   const openGoogleSignIn = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -42,7 +42,7 @@ export function Landing({ error }: Props) {
 
       <section className="mx-auto grid min-h-[650px] max-w-[1220px] grid-cols-1 items-center gap-[70px] px-5 pt-10 pb-16 min-[701px]:px-8 min-[701px]:pb-[90px] min-[1001px]:grid-cols-[.9fr_1.1fr] min-[1001px]:pt-[60px]">
         <div className="relative z-2 text-center min-[1001px]:text-left">
-          <span className="block text-[11px] font-bold tracking-[.13em] text-[#5d807a] uppercase">Your wellbeing, one day at a time</span>
+          <span className="block text-xs font-bold tracking-[.13em] text-[#5d807a] uppercase">Your wellbeing, one day at a time</span>
           <h1 className="mx-auto my-[18px] max-w-[680px] text-[47px] leading-[.98] tracking-[-.055em] min-[701px]:text-[clamp(48px,5.4vw,75px)] min-[1001px]:mx-0">
             See how you’re really doing, <em className="font-serif font-medium text-[#d18a00]">one check-in at a time.</em>
           </h1>
@@ -85,19 +85,18 @@ export function Landing({ error }: Props) {
                 <h3 className="mt-1 mb-0 text-[19px]">You took a moment for yourself.</h3>
               </div>
             </div>
-            <div className="my-6 grid grid-cols-2 gap-2 min-[701px]:gap-3">
-              {metricKeys.map((metric) => (
+            <div className="my-6 grid grid-cols-3 gap-1.5 min-[701px]:gap-3">
+              {previewMetrics.map((metric) => (
                 <div className="flex flex-col rounded-[14px] bg-[#f5f3ed] p-3 min-[701px]:p-[15px]" key={metric}>
-                  <span className="text-[9px] tracking-[.13em] text-muted">{metricDetails[metric].label.toUpperCase()}</span>
-                  <strong className="my-1.5 text-[19px] min-[701px]:text-[23px]">{formatMetricValue(metric, previewValues[metric], true)}</strong>
-                  <small className="text-muted">{describeMetric(metric, previewValues[metric])}</small>
+                  <span className="text-[9px] tracking-[.13em] text-muted">{trendMetricDetails[metric].label.toUpperCase()}</span>
+                  <strong className="my-1.5 text-[19px] min-[701px]:text-[23px]">{formatTrendMetric(metric, previewValues[metric])}</strong>
+                  <small className="text-muted">{describeTrendMetric(metric, previewValues[metric])}</small>
                 </div>
               ))}
             </div>
             <div className="h-[100px] rounded-[14px] bg-[#faf8f2] p-2.5">
               <svg className="h-full w-full" viewBox="0 0 420 100" preserveAspectRatio="none">
                 <path d="M0,70 C45,84 70,45 110,54 S175,88 216,46 S280,20 320,42 S370,74 420,28" fill="none" stroke="#e89c66" strokeWidth="4" strokeLinecap="round" />
-                <path d="M0,82 C45,69 72,77 112,70 S176,40 220,58 S280,82 322,64 S370,38 420,50" fill="none" stroke="#74938a" strokeWidth="3" strokeLinecap="round" />
                 <path d="M0,55 C48,48 72,67 115,62 S178,30 220,48 S282,67 325,55 S375,44 420,58" fill="none" stroke="#c77768" strokeWidth="3" strokeLinecap="round" />
                 <path d="M0,34 C46,43 76,28 118,36 S178,55 220,31 S280,22 324,35 S372,43 420,25" fill="none" stroke="#a98fc4" strokeWidth="3" strokeLinecap="round" />
               </svg>

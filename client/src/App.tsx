@@ -25,7 +25,6 @@ function App() {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
@@ -107,12 +106,9 @@ function App() {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     const socket = new WebSocket(`${protocol}://${window.location.host}/api/updates`);
     socket.onmessage = (event) => {
-      const message = JSON.parse(event.data) as { type: string; log?: DailyLog; date?: string };
+      const message = JSON.parse(event.data) as { type: string; log?: DailyLog };
       if (message.type === "log.updated" && message.log) {
         setLogs((current) => [...current.filter((log) => log.date !== message.log!.date), message.log!].sort((a, b) => a.date.localeCompare(b.date)));
-      }
-      if (message.type === "log.deleted" && message.date) {
-        setLogs((current) => current.filter((log) => log.date !== message.date));
       }
     };
     return () => socket.close();
@@ -142,21 +138,10 @@ function App() {
     }
   };
 
-  const deleteLog = async (date: string) => {
-    setDeleting(true);
-    try {
-      await api.deleteLog(date);
-      setLogs((current) => current.filter((log) => log.date !== date));
-      setToast("Today’s check-in was deleted.");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   if (authTabReturn || checkingSession) return <div className="min-h-screen bg-cream" />;
   if (!user) return <Landing error={authError} />;
 
-  return <Dashboard user={user} logs={logs} period={period} loadingLogs={loadingLogs} saving={saving} deleting={deleting} toast={toast} onPeriodChange={setPeriod} onSave={saveLog} onDelete={deleteLog} onLogout={logout} />;
+  return <Dashboard user={user} logs={logs} period={period} loadingLogs={loadingLogs} saving={saving} toast={toast} onPeriodChange={setPeriod} onSave={saveLog} onLogout={logout} />;
 }
 
 export default App;

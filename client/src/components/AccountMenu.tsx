@@ -38,7 +38,7 @@ export function AccountMenu({ user, onLogout }: AccountMenuProps) {
           <Avatar user={user} />
           <span className="hidden min-w-0 flex-col min-[701px]:flex">
             <strong className="max-w-40 truncate text-xs">{user.name}</strong>
-            <small className="max-w-44 truncate text-[11px] text-muted">{user.email}</small>
+            <small className="max-w-44 truncate text-xs text-muted">{user.email}</small>
           </span>
           <ChevronDown
             className="hidden text-muted transition-transform duration-150
