@@ -3,6 +3,7 @@ import { OAuth2Client } from "google-auth-library";
 import { config } from "../config.js";
 import { db } from "../db.js";
 import { requireAuth } from "../auth.js";
+import { seedSampleHistory } from "../seed.js";
 import type { SessionUser } from "../types.js";
 
 type UserRow = {
@@ -81,6 +82,7 @@ export async function authRoutes(app: FastifyInstance) {
       });
 
       const row = db.prepare("SELECT id, email, name, avatar_url FROM users WHERE email = ?").get(profile.email) as UserRow;
+      if (config.seedSampleData) seedSampleHistory(row.id);
       setSession(reply, toSessionUser(row));
       return reply.redirect(authReturnUrl());
     } catch (error) {

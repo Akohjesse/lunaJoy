@@ -2,7 +2,6 @@
 
 LunaJoy is a mental health progress tracker built with React, Fastify, TypeScript, Tailwind CSS and SQLite.
 
-
 ## Project structure
 
 ```text
@@ -69,36 +68,22 @@ npm run dev
 
 The database and its tables are created automatically. The root `npm install` installs dependencies for both workspaces; do not run a separate install inside `client` or `server`.
 
-## Environment variables
-
-The server reads `server/.env`.
-
-| Variable | Required | Default | Purpose |
-| --- | --- | --- | --- |
-| `GOOGLE_CLIENT_ID` | Yes | None | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Yes | None | Google OAuth client secret |
-| `JWT_SECRET` | Yes | Development fallback | Signs session tokens; always replace it |
-| `GOOGLE_CALLBACK_URL` | No | `http://localhost:4000/api/auth/google/callback` | OAuth callback registered with Google |
-| `WEB_ORIGIN` | No | `http://localhost:5173` | Allowed frontend origin and OAuth return origin |
-| `PORT` | No | `4000` | API port |
-| `HOST` | No | `0.0.0.0` | API host |
-| `DATABASE_PATH` | No | `./data/lunajoy.db` | SQLite path relative to the server workspace |
+The example environment enables `SEED_SAMPLE_DATA=true`. After a user signs in with Google, the server inserts seven sample historical logs for assessment purposes. It uses `INSERT OR IGNORE`, so existing dates are never overwritten, and today is left available for a real check-in. Set this variable to `false` for normal use.
 
 ## API endpoints
 
 All log and session endpoints use the `lunajoy_session` HTTP-only cookie. Unauthenticated requests return `401 Unauthorized`.
 
-| Method | Endpoint | Purpose |
-| --- | --- | --- |
-| `GET` | `/api/health` | API health check |
-| `GET` | `/api/auth/google` | Start Google OAuth |
-| `GET` | `/api/auth/google/callback` | Complete Google OAuth and create the session |
-| `GET` | `/api/auth/session` | Return the authenticated user |
-| `POST` | `/api/auth/logout` | Clear the session cookie |
-| `POST` | `/api/log` | Create or update one log for the supplied date |
-| `GET` | `/api/logs?period=week` | Return the last 7 days of logs |
-| `GET` | `/api/logs?period=month` | Return the last 30 days of logs |
-| `GET` | `/api/updates` | Upgrade to an authenticated WebSocket connection |
+| Method | Endpoint                    | Purpose                                          |
+| ------ | --------------------------- | ------------------------------------------------ |
+| `GET`  | `/api/auth/google`          | Start Google OAuth                               |
+| `GET`  | `/api/auth/google/callback` | Complete Google OAuth and create the session     |
+| `GET`  | `/api/auth/session`         | Return the authenticated user                    |
+| `POST` | `/api/auth/logout`          | Clear the session cookie                         |
+| `POST` | `/api/log`                  | Create or update one log for the supplied date   |
+| `GET`  | `/api/logs?period=week`     | Return the last 7 days of logs                   |
+| `GET`  | `/api/logs?period=month`    | Return the last 30 days of logs                  |
+| `GET`  | `/api/updates`              | Upgrade to an authenticated WebSocket connection |
 
 Example `POST /api/log` body:
 

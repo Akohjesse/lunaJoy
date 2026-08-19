@@ -32,5 +32,6 @@ export const config = {
   googleEnabled: Boolean(googleClientId && googleClientSecret),
   googleCallbackUrl: process.env.GOOGLE_CALLBACK_URL ?? "http://localhost:4000/api/auth/google/callback",
   databasePath: path.resolve(process.cwd(), process.env.DATABASE_PATH ?? "./data/lunajoy.db"),
+  seedSampleData: process.env.SEED_SAMPLE_DATA === "true",
   production,
 };

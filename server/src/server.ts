@@ -58,8 +58,6 @@ app.decorate("broadcastLogUpdate", (userId: number, log: unknown) => {
   }
 });
 
-app.get("/api/health", async () => ({ status: "ok" }));
-
 app.get("/api/updates", { websocket: true }, async (socket, request) => {
   try {
     await request.jwtVerify();
